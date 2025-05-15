@@ -1,0 +1,40 @@
+{
+    "largeur_epaule": {
+      "joints": [5, 6],
+      "description": "Distance entre épaule gauche et épaule droite"
+    },
+    "tour_poitrine": {
+      "joints": [0],
+      "description": "Zone autour du torse (joint 0 - sternum)"
+    },
+    "tour_taille": {
+      "joints": [11],
+      "description": "Zone autour du bassin gauche"
+    },
+    "tour_hanche": {
+      "joints": [11, 12],
+      "description": "Distance entre bassin gauche et bassin droit"
+    },
+    "longueur_bras_gauche": {
+      "joints": [5, 9],
+      "description": "Distance entre épaule gauche et poignet gauche"
+    },
+    "longueur_bras_droite": {
+      "joints": [6, 10],
+      "description": "Distance entre épaule droite et poignet droit"
+    },
+    "longueur_jambe_gauche": {
+      "joints": [11, 15],
+      "description": "Distance entre bassin gauche et pied gauche"
+    },
+    "longueur_jambe_droite": {
+      "joints": [12, 16],
+      "description": "Distance entre bassin droit et pied droit"
+    },
+    "hauteur_totale": {
+      "joints": [23, 0],
+      "description": "Distance entre sommet de la tête (joint 23) et torse (joint 0)"
+    }
+
+  }
+  
