@@ -33,10 +33,59 @@ from ..config import cfg
 
 
 class STAR(nn.Module):
-    def __init__(self,gender='female',num_betas=10):
+    # def __init__(self,gender='female',num_betas=10,device='cpu'):
+    #     super(STAR, self).__init__()
+
+    #     if gender not in ['male','female','neutral']:
+    #         raise RuntimeError('Invalid Gender')
+
+    #     if gender == 'male':
+    #         path_model = cfg.path_male_star
+    #     elif gender == 'female':
+    #         path_model = cfg.path_female_star
+    #     else:
+    #         path_model = cfg.path_neutral_star
+
+    #     if not os.path.exists(path_model):
+    #         raise RuntimeError('Path does not exist %s' % (path_model))
+    #     import numpy as np
+
+    #     star_model = np.load(path_model,allow_pickle=True)
+    #     J_regressor = star_model['J_regressor']
+    #     rows,cols = np.where(J_regressor!=0)
+    #     vals = J_regressor[rows,cols]
+    #     self.num_betas = num_betas
+
+    #     # Model sparse joints regressor, regresses joints location from a mesh
+    #     # self.register_buffer('J_regressor', torch.cuda.FloatTensor(J_regressor))
+    #     self.register_buffer('J_regressor', torch.tensor(J_regressor, dtype=torch.float32, device=device))
+
+    #     # Model skinning weights
+    #     self.register_buffer('weights', torch.cuda.FloatTensor(star_model['weights']))
+    #     # Model pose corrective blend shapes
+    #     self.register_buffer('posedirs', torch.cuda.FloatTensor(star_model['posedirs'].reshape((-1,93))))
+    #     # Mean Shape
+    #     self.register_buffer('v_template', torch.cuda.FloatTensor(star_model['v_template']))
+    #     # Shape corrective blend shapes
+    #     self.register_buffer('shapedirs', torch.cuda.FloatTensor(np.array(star_model['shapedirs'][:,:,:num_betas])))
+    #     # Mesh traingles
+    #     self.register_buffer('faces', torch.from_numpy(star_model['f'].astype(np.int64)))
+    #     self.f = star_model['f']
+    #     # Kinematic tree of the model
+    #     self.register_buffer('kintree_table', torch.from_numpy(star_model['kintree_table'].astype(np.int64)))
+
+    #     id_to_col = {self.kintree_table[1, i].item(): i for i in range(self.kintree_table.shape[1])}
+    #     self.register_buffer('parent', torch.LongTensor(
+    #         [id_to_col[self.kintree_table[0, it].item()] for it in range(1, self.kintree_table.shape[1])]))
+
+    #     self.verts = None
+    #     self.J = None
+    #     self.R = None
+    
+    def __init__(self, gender='female', num_betas=10, device='cpu'):
         super(STAR, self).__init__()
 
-        if gender not in ['male','female','neutral']:
+        if gender not in ['male', 'female', 'neutral']:
             raise RuntimeError('Invalid Gender')
 
         if gender == 'male':
@@ -48,28 +97,34 @@ class STAR(nn.Module):
 
         if not os.path.exists(path_model):
             raise RuntimeError('Path does not exist %s' % (path_model))
+        
         import numpy as np
-
-        star_model = np.load(path_model,allow_pickle=True)
+        star_model = np.load(path_model, allow_pickle=True)
         J_regressor = star_model['J_regressor']
-        rows,cols = np.where(J_regressor!=0)
-        vals = J_regressor[rows,cols]
+        rows, cols = np.where(J_regressor != 0)
+        vals = J_regressor[rows, cols]
         self.num_betas = num_betas
 
         # Model sparse joints regressor, regresses joints location from a mesh
-        self.register_buffer('J_regressor', torch.cuda.FloatTensor(J_regressor))
+        self.register_buffer('J_regressor', torch.tensor(J_regressor, dtype=torch.float32, device=device))
 
         # Model skinning weights
-        self.register_buffer('weights', torch.cuda.FloatTensor(star_model['weights']))
+        self.register_buffer('weights', torch.tensor(star_model['weights'], dtype=torch.float32, device=device))
+
         # Model pose corrective blend shapes
-        self.register_buffer('posedirs', torch.cuda.FloatTensor(star_model['posedirs'].reshape((-1,93))))
+        self.register_buffer('posedirs', torch.tensor(star_model['posedirs'].reshape((-1, 93)), dtype=torch.float32, device=device))
+
         # Mean Shape
-        self.register_buffer('v_template', torch.cuda.FloatTensor(star_model['v_template']))
+        self.register_buffer('v_template', torch.tensor(star_model['v_template'], dtype=torch.float32, device=device))
+
         # Shape corrective blend shapes
-        self.register_buffer('shapedirs', torch.cuda.FloatTensor(np.array(star_model['shapedirs'][:,:,:num_betas])))
-        # Mesh traingles
+        self.register_buffer('shapedirs', torch.tensor(np.array(star_model['shapedirs'][:, :, :num_betas]), dtype=torch.float32, device=device))
+
+        # Mesh triangles
         self.register_buffer('faces', torch.from_numpy(star_model['f'].astype(np.int64)))
+
         self.f = star_model['f']
+
         # Kinematic tree of the model
         self.register_buffer('kintree_table', torch.from_numpy(star_model['kintree_table'].astype(np.int64)))
 
@@ -80,6 +135,7 @@ class STAR(nn.Module):
         self.verts = None
         self.J = None
         self.R = None
+
 
     def forward(self, pose, betas , trans):
         '''

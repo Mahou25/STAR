@@ -20,9 +20,12 @@
 # Ahmed A. A. Osman
 
 import os
-path_male_star = ''
-path_female_star = ''
-path_neutral_star = ''
+path_male_star = os.path.join(os.path.dirname(__file__), '..', 'star_1_1', 'male', 'male.npz')
+# 'star_1_1/male'
+path_female_star = os.path.join(os.path.dirname(__file__), '..', 'star_1_1', 'female', 'female.npz')
+# 'star_1_1/female'
+path_neutral_star = os.path.join(os.path.dirname(__file__), '..', 'star_1_1', 'neutral', 'neutral.npz')
+# 'star_1_1/neutral'
 
 data_type = 'float32'
 
