@@ -3,6 +3,7 @@ import numpy as np
 import trimesh
 import pyrender
 import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation as R
 
 def charger_modele_star(npz_path):
     """
@@ -115,7 +116,109 @@ def visualiser_joints(Jtr, titre="Visualisation des joints STAR"):
     scene.add(light, pose=camera_pose)
 
     pyrender.Viewer(scene, use_raymond_lighting=True, window_title=titre)
+    
 
+
+def visualiser_joints_sur_mesh(v_template, Jtr, genre="neutral", titre="Joints sur mesh STAR"):
+    """
+    Visualise les joints superposés au mesh STAR avec pyrender.
+    genre: "female", "male" ou "neutral" pour charger le bon fichier faces.
+    Affiche aussi les liens ("bones") entre joints pour mieux voir la structure.
+    """
+
+    scene = pyrender.Scene(bg_color=[1.0, 1.0, 1.0, 1.0], ambient_light=[0.2, 0.2, 0.2])
+
+    # Chargement faces
+    faces_path = os.path.join(os.path.dirname(__file__), '..', 'star_1_1', genre, 'smplh_faces.npy')
+    if not os.path.exists(faces_path):
+        print(f"❌ Fichier des faces manquant ({faces_path})")
+        return
+    faces = np.load(faces_path)
+    mesh = trimesh.Trimesh(vertices=v_template, faces=faces, process=False)
+    star_mesh = pyrender.Mesh.from_trimesh(mesh, smooth=True)
+    scene.add(star_mesh)
+
+    # Debug : afficher quelques positions joints
+    print("Positions joints (extraits):", Jtr[:5])
+
+    # Couleur jaune vif
+    yellow_color = np.array([255, 255, 0, 255], dtype=np.uint8)
+    sphere_radius = 0.04
+
+    # Ajouter les joints comme sphères jaunes
+    for joint in Jtr:
+        sphere = trimesh.creation.icosphere(subdivisions=2, radius=sphere_radius)
+        sphere.apply_translation(joint)
+        sphere.visual.vertex_colors = yellow_color
+        joint_mesh = pyrender.Mesh.from_trimesh(sphere, smooth=False)
+        scene.add(joint_mesh)
+
+    # Liste des liens ("bones") entre joints STAR (indices)
+    bones = [
+        (0,1), (1,2), (2,3), (3,4),
+        (0,5), (5,6), (6,7),
+        (0,8), (8,9), (9,10),
+        (0,11), (11,12), (12,13),
+        (0,14), (14,15), (15,16),
+        (0,17), (17,18), (18,19), (19,20), (20,21), (21,22), (22,23)
+    ]
+
+    # Ajouter des cylindres entre joints pour les bones
+    for (i_start, i_end) in bones:
+        if i_start >= len(Jtr) or i_end >= len(Jtr):
+            continue
+        start = Jtr[i_start]
+        end = Jtr[i_end]
+        vec = end - start
+        length = np.linalg.norm(vec)
+        if length < 1e-6:
+            continue
+        direction = vec / length
+
+        # Création cylindre aligné avec le segment
+        cyl_radius = sphere_radius / 3
+        cylinder = trimesh.creation.cylinder(radius=cyl_radius, height=length, sections=16)
+
+        # Alignement du cylindre sur le vecteur
+        axis = np.array([0, 0, 1])
+        # Rotation qui aligne axis sur direction
+        rot_quat = R.align_vectors([direction], [axis])[0]
+        rot_mat = np.eye(4)
+        rot_mat[:3, :3] = rot_quat.as_matrix()
+        cylinder.apply_transform(rot_mat)
+
+        # Positionner le cylindre entre les deux joints
+        translation = start + vec / 2
+        cylinder.apply_translation(translation)
+
+        # Couleur jaune aussi
+        cylinder.visual.vertex_colors = yellow_color
+        bone_mesh = pyrender.Mesh.from_trimesh(cylinder, smooth=True)
+        scene.add(bone_mesh)
+
+    # Afficher axes XYZ pour orientation
+    axes = trimesh.creation.axis(axis_length=0.1)
+    axes_mesh = pyrender.Mesh.from_trimesh(axes, smooth=False)
+    scene.add(axes_mesh)
+
+    # Caméra centrée et reculée
+    center = v_template.mean(axis=0)
+    distance = 2.0
+    camera = pyrender.PerspectiveCamera(yfov=np.pi / 3.0)
+    camera_pose = np.array([
+        [1.0, 0.0, 0.0, center[0]],
+        [0.0, 1.0, 0.0, center[1]],
+        [0.0, 0.0, 1.0, center[2] + distance],
+        [0.0, 0.0, 0.0, 1.0]
+    ])
+    scene.add(camera, pose=camera_pose)
+
+    # Lumière directionnelle
+    light = pyrender.DirectionalLight(color=np.ones(3), intensity=4.0)
+    scene.add(light, pose=camera_pose)
+
+    # Affichage
+    pyrender.Viewer(scene, use_raymond_lighting=True, window_title=titre)
 
 def pipeline_star():
     base_dir = os.path.join(os.path.dirname(__file__), '..', 'star_1_1')
@@ -141,6 +244,8 @@ def pipeline_star():
         visualiser_joints(Jtr, titre=f"Joints STAR - {genre}")
         visualiser_joints_squelette(Jtr, titre=f"Squelette 3D - {genre}")
         afficher_indices_joints(Jtr)
+        visualiser_joints_sur_mesh(v_template, Jtr, titre=f"Joints + Mesh - {genre}")
+
 
 
 if __name__ == "__main__":
